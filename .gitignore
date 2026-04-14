@@ -15,7 +15,3 @@ MemoryCaptures/
 *.sln.docstates
 *.apk
 *.aab
-
-# Secrets
-Assets/Resources/secrets.txt
-Assets/Resources/secrets.txt.meta

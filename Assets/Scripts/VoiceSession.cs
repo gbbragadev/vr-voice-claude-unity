@@ -4,11 +4,14 @@ using UnityEngine;
 
 namespace VoiceClaude
 {
-    public enum VoiceState { Idle, Listening, Recording, Thinking, Speaking }
+    // Wake-word-less MVP: app always listens, VAD detects when the user
+    // starts speaking, records until 800ms of silence, then processes the
+    // turn. Room ambient noise will not trigger recording because the RMS
+    // threshold (0.02) is well above idle room noise.
+    public enum VoiceState { Listening, Recording, Thinking, Speaking }
 
     public class VoiceSession : MonoBehaviour
     {
-        public WakeWordDetector wakeDetector;
         public MicCapture mic;
         public CameraCapture cameraCapture;
         public AudioPlayback playback;
@@ -18,7 +21,7 @@ namespace VoiceClaude
         public event Action<string> OnClaudeSaid;
 
         private readonly List<ChatMessage> _history = new();
-        private VoiceState _state = VoiceState.Idle;
+        private VoiceState _state = VoiceState.Listening;
 
         public VoiceState State
         {
@@ -33,8 +36,6 @@ namespace VoiceClaude
 
         private void Start()
         {
-            wakeDetector.Init();
-            wakeDetector.OnWakeDetected += HandleWake;
             mic.OnSpeechStart += HandleSpeechStart;
             mic.OnSpeechEnd += HandleSpeechEnd;
             playback.OnPlaybackEnded += HandlePlaybackEnded;
@@ -43,14 +44,11 @@ namespace VoiceClaude
             // warm-up latency every time the user wakes the app.
             cameraCapture.StartCamera();
 
-            wakeDetector.Start_();
-            State = VoiceState.Idle;
+            StartListening();
         }
 
-        private void HandleWake()
+        private void StartListening()
         {
-            if (State != VoiceState.Idle) return;
-            wakeDetector.Stop_();
             mic.StartCapture();
             State = VoiceState.Listening;
         }
@@ -88,19 +86,13 @@ namespace VoiceClaude
             catch (Exception e)
             {
                 Debug.LogError($"VoiceSession error: {e.Message}");
-                ReturnToIdle();
+                StartListening();
             }
         }
 
         private void HandlePlaybackEnded()
         {
-            ReturnToIdle();
-        }
-
-        private void ReturnToIdle()
-        {
-            wakeDetector.Start_();
-            State = VoiceState.Idle;
+            StartListening();
         }
     }
 }

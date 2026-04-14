@@ -13,7 +13,6 @@ namespace VoiceClaude
         private string _user = "";
         private string _claude = "";
 
-        private static readonly Color ColorIdle = new(0.5f, 0.5f, 0.5f);
         private static readonly Color ColorListening = new(0.2f, 0.5f, 1f);
         private static readonly Color ColorRecording = new(0.2f, 0.9f, 0.3f);
         private static readonly Color ColorThinking = new(1f, 0.6f, 0.1f);
@@ -33,12 +32,11 @@ namespace VoiceClaude
             if (border == null) return;
             border.color = s switch
             {
-                VoiceState.Idle => ColorIdle,
                 VoiceState.Listening => ColorListening,
                 VoiceState.Recording => ColorRecording,
                 VoiceState.Thinking => ColorThinking,
                 VoiceState.Speaking => ColorSpeaking,
-                _ => ColorIdle,
+                _ => ColorListening,
             };
         }
 
