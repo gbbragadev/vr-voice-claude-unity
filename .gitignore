@@ -1,0 +1,21 @@
+# Unity generated
+Library/
+Temp/
+Obj/
+Build/
+Builds/
+Logs/
+UserSettings/
+MemoryCaptures/
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.suo
+*.sln.docstates
+*.apk
+*.aab
+
+# Secrets
+Assets/Resources/secrets.txt
+Assets/Resources/secrets.txt.meta
