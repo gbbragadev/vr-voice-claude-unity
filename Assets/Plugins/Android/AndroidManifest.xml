@@ -15,13 +15,15 @@
   <uses-permission android:name="com.oculus.permission.USE_SCENE" />
   <uses-permission android:name="com.oculus.permission.USE_ANCHOR_API" />
   <uses-permission android:name="com.oculus.permission.HAND_TRACKING" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
 
   <application>
     <meta-data android:name="com.oculus.supportedDevices" android:value="quest3|quest3s" />
     <meta-data android:name="com.oculus.vr.focusaware" android:value="true" />
     <meta-data android:name="com.oculus.handtracking.frequency" android:value="MAX" />
 
-    <activity android:name="com.unity3d.player.UnityPlayerGameActivity"
+    <activity android:name="com.gbbraga.vrvoiceclaude.MediaProjectionCaptureActivity"
               android:theme="@style/BaseUnityGameActivityTheme"
               android:screenOrientation="landscape"
               android:launchMode="singleTask"
@@ -36,5 +38,10 @@
       </intent-filter>
       <meta-data android:name="com.oculus.vr.focusaware" android:value="true" />
     </activity>
+
+    <service
+        android:name="com.gbbraga.vrvoiceclaude.MediaProjectionForegroundService"
+        android:foregroundServiceType="mediaProjection"
+        android:exported="false" />
   </application>
 </manifest>
