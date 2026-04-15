@@ -23,6 +23,8 @@ namespace VoiceClaude
 
         private bool _loggedFirstSample;
         private bool _loggedFirstSpeech;
+        private float _lastRmsLogTime;
+        private float _maxRmsSinceLog;
 
         public void StartCapture()
         {
@@ -92,6 +94,13 @@ namespace VoiceClaude
             {
                 _loggedFirstSample = true;
                 Debug.Log($"[MicCapture] first sample batch: len={len}, rms={rms:F4}, threshold={SpeechThreshold}");
+            }
+            if (rms > _maxRmsSinceLog) _maxRmsSinceLog = rms;
+            if (Time.realtimeSinceStartup - _lastRmsLogTime >= 1.5f)
+            {
+                Debug.Log($"[MicCapture] rms peak last 1.5s: {_maxRmsSinceLog:F4} (threshold={SpeechThreshold})");
+                _lastRmsLogTime = Time.realtimeSinceStartup;
+                _maxRmsSinceLog = 0f;
             }
             if (rms > SpeechThreshold)
             {
