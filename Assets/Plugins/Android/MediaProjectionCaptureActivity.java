@@ -387,12 +387,18 @@ public class MediaProjectionCaptureActivity extends UnityPlayerGameActivity {
 
             imageReader.setOnImageAvailableListener(onImageAvailable, captureHandler);
 
+            // Flags = 0 (no AUTO_MIRROR). On Quest 3, AUTO_MIRROR creates a
+            // FLAG_PRESENTATION display that MediaRouter picks up as a secondary
+            // audio output route (name=Phone), which corrupts the AudioRecord
+            // session — the mic opens but reads all zeros. Without the flag the
+            // virtual display still mirrors the default display's content on
+            // Android 14+ by default for MediaProjection-created displays.
             virtualDisplay = mediaProjection.createVirtualDisplay(
                     "vrvoiceclaude-capture",
                     captureWidth,
                     captureHeight,
                     captureDensity,
-                    DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                    0,
                     imageReader.getSurface(),
                     null,
                     captureHandler);
