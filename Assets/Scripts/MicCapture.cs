@@ -21,14 +21,20 @@ namespace VoiceClaude
         private int _speechFrames;
         private readonly System.Collections.Generic.List<float> _buffer = new();
 
+        private bool _loggedFirstSample;
+        private bool _loggedFirstSpeech;
+
         public void StartCapture()
         {
             if (_clip != null) return;
+            var devices = Microphone.devices;
+            Debug.Log($"[MicCapture] StartCapture: {devices.Length} device(s): [{string.Join(", ", devices)}]");
             _clip = Microphone.Start(null, true, BufferSeconds, SampleRate);
             _lastPos = 0;
             _isSpeaking = false;
             _speechFrames = 0;
             _buffer.Clear();
+            Debug.Log($"[MicCapture] clip created: samples={_clip?.samples ?? -1}, channels={_clip?.channels ?? -1}, freq={_clip?.frequency ?? -1}, loadState={_clip?.loadState}");
         }
 
         public void StopCapture()
@@ -62,8 +68,18 @@ namespace VoiceClaude
             _lastPos = pos;
 
             float rms = ComputeRms(samples);
+            if (!_loggedFirstSample)
+            {
+                _loggedFirstSample = true;
+                Debug.Log($"[MicCapture] first sample batch: len={len}, rms={rms:F4}, threshold={SpeechThreshold}");
+            }
             if (rms > SpeechThreshold)
             {
+                if (!_loggedFirstSpeech)
+                {
+                    _loggedFirstSpeech = true;
+                    Debug.Log($"[MicCapture] first speech frame detected: rms={rms:F4}");
+                }
                 if (!_isSpeaking)
                 {
                     _speechFrames++;
