@@ -43,10 +43,20 @@ namespace VoiceClaude
         {
             if (_clip == null) return;
             int pos = Microphone.GetPosition(null);
+            // Quest 3 + Unity 6: Microphone.Start returns a valid AudioClip but the
+            // device takes 1-2 frames to actually begin recording. During that window
+            // GetPosition can return -1 and/or _clip.samples can be 0, which makes
+            // the len math below underflow and `new float[len]` throws OverflowException.
+            int clipSamples = _clip.samples;
+            if (pos < 0 || clipSamples <= 0) return;
             if (pos == _lastPos) return;
 
-            int len = pos >= _lastPos ? pos - _lastPos : _clip.samples - _lastPos + pos;
-            if (len == 0) return;
+            int len = pos >= _lastPos ? pos - _lastPos : clipSamples - _lastPos + pos;
+            if (len <= 0 || len > clipSamples)
+            {
+                _lastPos = pos;
+                return;
+            }
             var samples = new float[len];
             _clip.GetData(samples, _lastPos);
             _lastPos = pos;
