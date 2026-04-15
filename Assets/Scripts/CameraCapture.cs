@@ -37,6 +37,14 @@ namespace VoiceClaude
                 // Swallow — we're already in an error path; don't spam.
             }
         }
+#else
+        private static bool _editorStubWarned;
+        private static void WarnEditorStub(string member)
+        {
+            if (_editorStubWarned) return;
+            _editorStubWarned = true;
+            Debug.Log($"CameraCapture: Editor stub active ({member}). MediaProjection runs Android-only — deploy to Quest 3 to capture frames.");
+        }
 #endif
 
         public bool IsReady
@@ -55,11 +63,14 @@ namespace VoiceClaude
                     return false;
                 }
 #else
+                WarnEditorStub("IsReady");
                 return false;
 #endif
             }
         }
 
+        // Triggers the MediaProjection consent dialog on first call.
+        // IsReady remains false until the user accepts; poll before GrabJpeg.
         public void StartCamera()
         {
 #if UNITY_ANDROID && !UNITY_EDITOR
@@ -72,6 +83,8 @@ namespace VoiceClaude
                 Debug.LogWarning($"CameraCapture JNI error: StartCamera: {e.Message}");
                 LogJavaLastError();
             }
+#else
+            WarnEditorStub("StartCamera");
 #endif
         }
 
@@ -87,6 +100,8 @@ namespace VoiceClaude
                 Debug.LogWarning($"CameraCapture JNI error: StopCamera: {e.Message}");
                 LogJavaLastError();
             }
+#else
+            WarnEditorStub("StopCamera");
 #endif
         }
 
@@ -104,6 +119,7 @@ namespace VoiceClaude
                 return null;
             }
 #else
+            WarnEditorStub("GrabJpeg");
             return null;
 #endif
         }
