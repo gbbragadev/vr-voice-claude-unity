@@ -1,4 +1,3 @@
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -7,7 +6,7 @@ namespace VoiceClaude
     public class TranscriptPanel : MonoBehaviour
     {
         public VoiceSession session;
-        public TMP_Text text;
+        public Text text;
         public Image border;
 
         private string _user = "";
@@ -42,7 +41,7 @@ namespace VoiceClaude
 
         private void Render()
         {
-            text.text = $"<b>você:</b> {_user}\n\n<b>claude:</b> {_claude}";
+            text.text = $"você: {_user}\n\nclaude: {_claude}";
         }
     }
 }

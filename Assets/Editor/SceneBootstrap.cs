@@ -1,5 +1,4 @@
 using System.IO;
-using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -26,9 +25,9 @@ namespace VoiceClaude.Editor
 
             BuildCamera();
             BuildEventSystem();
-            var (canvasGO, tmp, border) = BuildCanvas();
+            var (canvasGO, label, border) = BuildCanvas();
             var voiceManager = BuildVoiceManager();
-            WireTranscriptPanel(canvasGO, voiceManager, tmp, border);
+            WireTranscriptPanel(canvasGO, voiceManager, label, border);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -63,7 +62,7 @@ namespace VoiceClaude.Editor
             es.AddComponent<StandaloneInputModule>();
         }
 
-        private static (GameObject canvas, TextMeshProUGUI text, Image border) BuildCanvas()
+        private static (GameObject canvas, Text label, Image border) BuildCanvas()
         {
             var canvasGO = new GameObject("TranscriptCanvas");
             var canvas = canvasGO.AddComponent<Canvas>();
@@ -87,22 +86,24 @@ namespace VoiceClaude.Editor
             var borderImage = borderGO.AddComponent<Image>();
             borderImage.color = new Color(0.5f, 0.5f, 0.5f, 0.6f);
 
-            // TMP text child
+            // Legacy uGUI Text child (uses built-in Arial — no TMP setup needed)
             var txtGO = new GameObject("TranscriptText");
             txtGO.transform.SetParent(canvasGO.transform, false);
-            var tmp = txtGO.AddComponent<TextMeshProUGUI>();
-            tmp.text = "pronto — fale algo";
-            tmp.fontSize = 48;
-            tmp.color = Color.white;
-            tmp.alignment = TextAlignmentOptions.Center;
-            tmp.enableWordWrapping = true;
-            var trt = tmp.GetComponent<RectTransform>();
+            var label = txtGO.AddComponent<Text>();
+            label.text = "pronto — fale algo";
+            label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            label.fontSize = 48;
+            label.color = Color.white;
+            label.alignment = TextAnchor.MiddleCenter;
+            label.horizontalOverflow = HorizontalWrapMode.Wrap;
+            label.verticalOverflow = VerticalWrapMode.Overflow;
+            var trt = label.GetComponent<RectTransform>();
             trt.anchorMin = new Vector2(0.05f, 0.05f);
             trt.anchorMax = new Vector2(0.95f, 0.95f);
             trt.offsetMin = Vector2.zero;
             trt.offsetMax = Vector2.zero;
 
-            return (canvasGO, tmp, borderImage);
+            return (canvasGO, label, borderImage);
         }
 
         private static GameObject BuildVoiceManager()
@@ -121,11 +122,11 @@ namespace VoiceClaude.Editor
         }
 
         private static void WireTranscriptPanel(GameObject canvasGO, GameObject voiceManager,
-            TextMeshProUGUI tmp, Image border)
+            Text label, Image border)
         {
             var panel = canvasGO.AddComponent<VoiceClaude.TranscriptPanel>();
             panel.session = voiceManager.GetComponent<VoiceClaude.VoiceSession>();
-            panel.text = tmp;
+            panel.text = label;
             panel.border = border;
         }
     }
