@@ -9,15 +9,8 @@ namespace VoiceClaude.Editor
     // One-shot project configurator invoked via
     //   Unity.exe -batchmode -quit -executeMethod VoiceClaude.Editor.ProjectBootstrap.Run
     // Sets PlayerSettings for Android IL2CPP ARM64, writes Packages/manifest.json
-    // with Meta XR Core SDK 85.0.0 (from Meta's NPM scoped registry) + the full
-    // set of built-in Unity modules required by Meta XR Core (animation, xr, vr,
-    // particlesystem, terrain, physics2d), and flips graphics API to Vulkan.
-    // Phase 3 target: immersive MR app on Quest 3 with native passthrough.
-    //
-    // Note: com.meta.xr.sdk.all umbrella was discontinued in Meta XR releases
-    // after v76. Phase 3 uses com.meta.xr.sdk.core directly (only package needed
-    // for OVRCameraRig + OVRPassthroughLayer + OVRManager). Other Meta packages
-    // (audio, voice, haptics, interaction) can be added later per-feature.
+    // with stock Unity modules + OpenXR, and flips graphics API to Vulkan.
+    // MVP target: 2D window app on Quest 3. Passthrough MR is a follow-up.
     public static class ProjectBootstrap
     {
         private const string PackageName = "com.gbbraga.vrvoiceclaude";
@@ -62,38 +55,22 @@ namespace VoiceClaude.Editor
         {
             var manifestPath = Path.Combine(Directory.GetCurrentDirectory(), "Packages", "manifest.json");
             var manifest = @"{
-  ""scopedRegistries"": [
-    {
-      ""name"": ""Meta XR"",
-      ""url"": ""https://npm.developer.oculus.com"",
-      ""scopes"": [
-        ""com.meta.xr""
-      ]
-    }
-  ],
   ""dependencies"": {
-    ""com.meta.xr.sdk.core"": ""85.0.0"",
     ""com.unity.ugui"": ""2.0.0"",
     ""com.unity.textmeshpro"": ""3.2.0-pre.10"",
     ""com.unity.modules.androidjni"": ""1.0.0"",
-    ""com.unity.modules.animation"": ""1.0.0"",
     ""com.unity.modules.audio"": ""1.0.0"",
     ""com.unity.modules.imageconversion"": ""1.0.0"",
     ""com.unity.modules.imgui"": ""1.0.0"",
     ""com.unity.modules.jsonserialize"": ""1.0.0"",
-    ""com.unity.modules.particlesystem"": ""1.0.0"",
     ""com.unity.modules.physics"": ""1.0.0"",
-    ""com.unity.modules.physics2d"": ""1.0.0"",
     ""com.unity.modules.screencapture"": ""1.0.0"",
-    ""com.unity.modules.terrain"": ""1.0.0"",
     ""com.unity.modules.ui"": ""1.0.0"",
     ""com.unity.modules.uielements"": ""1.0.0"",
     ""com.unity.modules.unitywebrequest"": ""1.0.0"",
     ""com.unity.modules.unitywebrequestaudio"": ""1.0.0"",
     ""com.unity.modules.unitywebrequestwww"": ""1.0.0"",
-    ""com.unity.modules.video"": ""1.0.0"",
-    ""com.unity.modules.vr"": ""1.0.0"",
-    ""com.unity.modules.xr"": ""1.0.0""
+    ""com.unity.modules.video"": ""1.0.0""
   }
 }";
             Directory.CreateDirectory(Path.GetDirectoryName(manifestPath));
