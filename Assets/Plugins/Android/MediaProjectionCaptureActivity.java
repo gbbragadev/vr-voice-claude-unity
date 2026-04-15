@@ -98,8 +98,11 @@ public class MediaProjectionCaptureActivity extends UnityPlayerGameActivity {
     private Handler captureHandler;
     private MediaProjection.Callback projectionCallback;
 
-    private int captureWidth;
-    private int captureHeight;
+    // volatile: written on the main thread in beginProjectionCapture, read
+    // on the capture HandlerThread in onImageAvailable. The Looper handoff
+    // likely establishes happens-before, but volatile makes it explicit.
+    private volatile int captureWidth;
+    private volatile int captureHeight;
     private int captureDensity;
 
     // ===================================================================
@@ -134,8 +137,11 @@ public class MediaProjectionCaptureActivity extends UnityPlayerGameActivity {
 
     /**
      * Kick off the system MediaProjection consent dialog. Safe to call
-     * multiple times — no-op if already capturing or if a request is in
-     * flight. Always hops to the UI thread.
+     * multiple times — no-op if already capturing or if a consent dialog
+     * is already in flight. Always hops to the UI thread; the reentrancy
+     * gate is evaluated INSIDE the UI-thread runnable to close the race
+     * where two rapid callers both pass an early capturing==false check
+     * before either reaches startActivityForResult.
      */
     public static void requestProjectionPermission() {
         final MediaProjectionCaptureActivity act = sInstance;
@@ -144,13 +150,19 @@ public class MediaProjectionCaptureActivity extends UnityPlayerGameActivity {
             Log.e(TAG, lastError);
             return;
         }
-        if (capturing) {
-            Log.i(TAG, "requestProjectionPermission: already capturing, no-op");
-            return;
-        }
         act.runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                // Reentrancy gate — must be on the UI thread so it is
+                // serialized with onActivityResult and with other callers.
+                if (capturing) {
+                    Log.i(TAG, "requestProjectionPermission: already capturing, no-op");
+                    return;
+                }
+                if (sPendingData != null) {
+                    Log.i(TAG, "requestProjectionPermission: consent flow already in flight, no-op");
+                    return;
+                }
                 try {
                     if (act.projectionManager == null) {
                         act.projectionManager = (MediaProjectionManager)
@@ -160,7 +172,8 @@ public class MediaProjectionCaptureActivity extends UnityPlayerGameActivity {
                     act.startActivityForResult(intent, REQUEST_CODE_MEDIA_PROJECTION);
                     Log.i(TAG, "Consent dialog launched");
                 } catch (Throwable t) {
-                    lastError = "requestProjectionPermission failed: " + t.getMessage();
+                    lastError = "requestProjectionPermission failed: "
+                            + t.getClass().getSimpleName() + ": " + String.valueOf(t.getMessage());
                     Log.e(TAG, lastError, t);
                 }
             }
@@ -212,7 +225,8 @@ public class MediaProjectionCaptureActivity extends UnityPlayerGameActivity {
             snapshot.compress(Bitmap.CompressFormat.JPEG, q, baos);
             return baos.toByteArray();
         } catch (Throwable t) {
-            lastError = "getLatestFrameJpeg failed: " + t.getMessage();
+            lastError = "getLatestFrameJpeg failed: "
+                    + t.getClass().getSimpleName() + ": " + String.valueOf(t.getMessage());
             Log.e(TAG, lastError, t);
             return null;
         } finally {
@@ -287,7 +301,8 @@ public class MediaProjectionCaptureActivity extends UnityPlayerGameActivity {
                         startService(svcIntent);
                     }
                 } catch (Throwable t) {
-                    lastError = "startForegroundService failed: " + t.getMessage();
+                    lastError = "startForegroundService failed: "
+                            + t.getClass().getSimpleName() + ": " + String.valueOf(t.getMessage());
                     Log.e(TAG, lastError, t);
                     MediaProjectionForegroundService.setReadyCallback(null);
                     sPendingData = null;
@@ -385,7 +400,8 @@ public class MediaProjectionCaptureActivity extends UnityPlayerGameActivity {
             capturing = true;
             Log.i(TAG, "VirtualDisplay created, capture running");
         } catch (Throwable t) {
-            lastError = "beginProjectionCapture failed: " + t.getMessage();
+            lastError = "beginProjectionCapture failed: "
+                    + t.getClass().getSimpleName() + ": " + String.valueOf(t.getMessage());
             Log.e(TAG, lastError, t);
             stopCaptureInternal();
         }
@@ -445,7 +461,8 @@ public class MediaProjectionCaptureActivity extends UnityPlayerGameActivity {
                     }
                 }
             } catch (Throwable t) {
-                lastError = "onImageAvailable failed: " + t.getMessage();
+                lastError = "onImageAvailable failed: "
+                        + t.getClass().getSimpleName() + ": " + String.valueOf(t.getMessage());
                 Log.e(TAG, lastError, t);
             } finally {
                 if (image != null) {
@@ -463,6 +480,8 @@ public class MediaProjectionCaptureActivity extends UnityPlayerGameActivity {
 
     private void stopCaptureInternal() {
         capturing = false;
+        // Step 1: release VirtualDisplay first — stops the image producer
+        // so the ImageReader stops receiving new frames.
         try {
             if (virtualDisplay != null) {
                 virtualDisplay.release();
@@ -471,9 +490,51 @@ public class MediaProjectionCaptureActivity extends UnityPlayerGameActivity {
         } catch (Throwable t) {
             Log.w(TAG, "virtualDisplay.release threw", t);
         }
+        // Step 2: detach the OnImageAvailableListener. Note that this call
+        // does NOT wait for an in-flight callback on the capture thread,
+        // so we must drain that thread before recycling latestFrame.
         try {
             if (imageReader != null) {
                 imageReader.setOnImageAvailableListener(null, null);
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "imageReader.setOnImageAvailableListener(null) threw", t);
+        }
+        // Step 3: drain the capture HandlerThread. quitSafely() lets any
+        // already-enqueued onImageAvailable runnable finish, then the
+        // looper exits. join(500) guarantees we observe its completion
+        // before we touch latestFrame. This closes the I5 race where the
+        // listener could write a fresh bitmap AFTER we recycled the old one.
+        HandlerThread threadToJoin = captureThread;
+        captureThread = null;
+        captureHandler = null;
+        if (threadToJoin != null) {
+            try {
+                threadToJoin.quitSafely();
+            } catch (Throwable t) {
+                Log.w(TAG, "captureThread.quitSafely threw", t);
+            }
+            try {
+                threadToJoin.join(500);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                Log.w(TAG, "captureThread.join interrupted", ie);
+            } catch (Throwable t) {
+                Log.w(TAG, "captureThread.join threw", t);
+            }
+        }
+        // Step 4: now that no capture callback can be running, it's safe
+        // to recycle latestFrame. Under the lock so no concurrent
+        // getLatestFrameJpeg caller gets torn state.
+        synchronized (LOCK) {
+            if (latestFrame != null) {
+                latestFrame.recycle();
+                latestFrame = null;
+            }
+        }
+        // Step 5: close ImageReader, release MediaProjection, stop FG service.
+        try {
+            if (imageReader != null) {
                 imageReader.close();
                 imageReader = null;
             }
@@ -494,21 +555,6 @@ public class MediaProjectionCaptureActivity extends UnityPlayerGameActivity {
             Log.w(TAG, "mediaProjection.stop threw", t);
         }
         projectionCallback = null;
-        try {
-            if (captureThread != null) {
-                captureThread.quitSafely();
-                captureThread = null;
-                captureHandler = null;
-            }
-        } catch (Throwable t) {
-            Log.w(TAG, "captureThread.quitSafely threw", t);
-        }
-        synchronized (LOCK) {
-            if (latestFrame != null) {
-                latestFrame.recycle();
-                latestFrame = null;
-            }
-        }
         try {
             Intent svcIntent = new Intent(this, MediaProjectionForegroundService.class);
             stopService(svcIntent);

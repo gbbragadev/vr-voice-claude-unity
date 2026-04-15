@@ -127,15 +127,15 @@ public class MediaProjectionForegroundService extends Service {
                 CHANNEL_ID,
                 "VR Voice Claude — Captura",
                 NotificationManager.IMPORTANCE_LOW);
-        channel.setDescription("Captura de tela ativa enquanto o Claude olha o que voce ve.");
+        channel.setDescription("Captura de tela ativa enquanto o Claude olha o que você vê.");
         channel.setShowBadge(false);
         nm.createNotificationChannel(channel);
     }
 
     private Notification buildNotification() {
         NotificationCompat.Builder b = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("VR Voice Claude esta capturando o que voce ve")
-                .setContentText("Toque pra parar")
+                .setContentTitle("VR Voice Claude está capturando o que você vê")
+                .setContentText("Captura de tela ativa")
                 .setSmallIcon(android.R.drawable.ic_menu_camera)
                 .setOngoing(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
