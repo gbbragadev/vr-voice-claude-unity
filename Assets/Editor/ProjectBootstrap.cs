@@ -9,8 +9,8 @@ namespace VoiceClaude.Editor
     // One-shot project configurator invoked via
     //   Unity.exe -batchmode -quit -executeMethod VoiceClaude.Editor.ProjectBootstrap.Run
     // Sets PlayerSettings for Android IL2CPP ARM64, writes Packages/manifest.json
-    // with stock Unity modules + OpenXR, and flips graphics API to Vulkan.
-    // MVP target: 2D window app on Quest 3. Passthrough MR is a follow-up.
+    // with Meta XR SDK All-in-One + stock Unity modules, and flips graphics API to Vulkan.
+    // Phase 3 target: immersive MR app on Quest 3 with native passthrough.
     public static class ProjectBootstrap
     {
         private const string PackageName = "com.gbbraga.vrvoiceclaude";
@@ -56,6 +56,8 @@ namespace VoiceClaude.Editor
             var manifestPath = Path.Combine(Directory.GetCurrentDirectory(), "Packages", "manifest.json");
             var manifest = @"{
   ""dependencies"": {
+    ""com.meta.xr.sdk.all"": ""76.0.0"",
+    ""com.unity.xr.management"": ""4.5.0"",
     ""com.unity.ugui"": ""2.0.0"",
     ""com.unity.textmeshpro"": ""3.2.0-pre.10"",
     ""com.unity.modules.androidjni"": ""1.0.0"",
