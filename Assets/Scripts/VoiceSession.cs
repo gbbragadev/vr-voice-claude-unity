@@ -36,12 +36,7 @@ namespace VoiceClaude
 
         private void Start()
         {
-            // Quest panel apps lose window focus whenever the user looks away to
-            // another panel, which would pause Unity and kill the AAudio stream
-            // (mic stops producing samples). Keep running regardless of focus.
-            Application.runInBackground = true;
-            Debug.Log("[VoiceSession] Start — runInBackground=true");
-
+            Debug.Log("[VoiceSession] Start");
             mic.OnSpeechStart += HandleSpeechStart;
             mic.OnSpeechEnd += HandleSpeechEnd;
             playback.OnPlaybackEnded += HandlePlaybackEnded;
