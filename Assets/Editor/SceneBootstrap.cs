@@ -25,9 +25,11 @@ namespace VoiceClaude.Editor
 
             BuildCamera();
             BuildEventSystem();
-            var (canvasGO, label, border) = BuildCanvas();
-            var voiceManager = BuildVoiceManager();
-            WireTranscriptPanel(canvasGO, voiceManager, label, border);
+            // Sprint 1: skip Canvas + VoiceManager wiring to isolate passthrough validation.
+            // Sprint 2 will reintroduce these (with avatar) once MR space is confirmed.
+            // var (canvasGO, label, border) = BuildCanvas();
+            // var voiceManager = BuildVoiceManager();
+            // WireTranscriptPanel(canvasGO, voiceManager, label, border);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -44,15 +46,69 @@ namespace VoiceClaude.Editor
 
         private static void BuildCamera()
         {
-            var camGO = new GameObject("Main Camera");
-            camGO.tag = "MainCamera";
-            var cam = camGO.AddComponent<Camera>();
-            cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.05f, 0.05f, 0.1f);
-            cam.nearClipPlane = 0.1f;
-            cam.farClipPlane = 50f;
-            camGO.AddComponent<AudioListener>();
-            camGO.transform.position = new Vector3(0, 1.6f, 0);
+            // OVRCameraRig from Meta XR SDK — replaces simple Camera.main for MR.
+            // Use reflection to avoid hard compile dep on Meta SDK in case package
+            // hasn't resolved yet (early bootstrap runs may not have the assembly).
+            var ovrRigType = System.Type.GetType("OVRCameraRig, Oculus.VR");
+            if (ovrRigType == null)
+            {
+                Debug.LogError("[SceneBootstrap] OVRCameraRig type not found. Run ProjectBootstrap first AND complete Meta XR SDK GUI import (see META_XR_SDK_FIRST_RUN.md).");
+                EditorApplication.Exit(1);
+                return;
+            }
+
+            var rigGO = new GameObject("OVRCameraRig");
+            rigGO.AddComponent(ovrRigType);
+
+            // OVRManager configures tracking origin + permission flow
+            var ovrManagerType = System.Type.GetType("OVRManager, Oculus.VR");
+            if (ovrManagerType != null)
+            {
+                var manager = rigGO.AddComponent(ovrManagerType);
+                // trackingOriginType = TrackingOrigin.FloorLevel via reflection
+                var prop = ovrManagerType.GetProperty("trackingOriginType");
+                if (prop != null)
+                {
+                    // FloorLevel = 1 in OVRManager.TrackingOrigin enum
+                    prop.SetValue(manager, System.Enum.ToObject(prop.PropertyType, 1));
+                }
+            }
+
+            // OVRPassthroughLayer in Underlay mode — renders camera feed behind app content
+            var passthroughType = System.Type.GetType("OVRPassthroughLayer, Oculus.VR");
+            if (passthroughType != null)
+            {
+                var ptLayer = rigGO.AddComponent(passthroughType);
+                // overlayType = Underlay (enum value 1)
+                var overlayProp = passthroughType.GetProperty("overlayType");
+                if (overlayProp != null)
+                {
+                    overlayProp.SetValue(ptLayer, System.Enum.ToObject(overlayProp.PropertyType, 1));
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[SceneBootstrap] OVRPassthroughLayer type not found — passthrough won't render");
+            }
+
+            // Find the CenterEye camera created by OVRCameraRig and configure
+            // clear flags for transparent MR rendering
+            var centerEyeGO = GameObject.Find("CenterEyeAnchor");
+            if (centerEyeGO != null)
+            {
+                var cam = centerEyeGO.GetComponent<Camera>();
+                if (cam != null)
+                {
+                    cam.clearFlags = CameraClearFlags.SolidColor;
+                    cam.backgroundColor = new Color(0f, 0f, 0f, 0f); // alpha 0 = passthrough shows through
+                    cam.nearClipPlane = 0.1f;
+                    cam.farClipPlane = 50f;
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[SceneBootstrap] CenterEyeAnchor not found — OVRCameraRig may not have spawned children yet");
+            }
         }
 
         private static void BuildEventSystem()
