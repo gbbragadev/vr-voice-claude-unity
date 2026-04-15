@@ -9,8 +9,9 @@ namespace VoiceClaude.Editor
     // One-shot project configurator invoked via
     //   Unity.exe -batchmode -quit -executeMethod VoiceClaude.Editor.ProjectBootstrap.Run
     // Sets PlayerSettings for Android IL2CPP ARM64, writes Packages/manifest.json
-    // with Meta XR Core SDK (via Meta's NPM scoped registry) + stock Unity modules,
-    // and flips graphics API to Vulkan.
+    // with Meta XR SDK All-in-One umbrella package + stock Unity modules
+    // (including animation module required by Meta XR Core), and flips graphics
+    // API to Vulkan.
     // Phase 3 target: immersive MR app on Quest 3 with native passthrough.
     public static class ProjectBootstrap
     {
@@ -56,21 +57,12 @@ namespace VoiceClaude.Editor
         {
             var manifestPath = Path.Combine(Directory.GetCurrentDirectory(), "Packages", "manifest.json");
             var manifest = @"{
-  ""scopedRegistries"": [
-    {
-      ""name"": ""Meta XR"",
-      ""url"": ""https://npm.developer.oculus.com"",
-      ""scopes"": [
-        ""com.meta.xr""
-      ]
-    }
-  ],
   ""dependencies"": {
-    ""com.meta.xr.sdk.core"": ""85.0.0"",
-    ""com.unity.xr.management"": ""4.5.0"",
+    ""com.meta.xr.sdk.all"": ""76.0.0"",
     ""com.unity.ugui"": ""2.0.0"",
     ""com.unity.textmeshpro"": ""3.2.0-pre.10"",
     ""com.unity.modules.androidjni"": ""1.0.0"",
+    ""com.unity.modules.animation"": ""1.0.0"",
     ""com.unity.modules.audio"": ""1.0.0"",
     ""com.unity.modules.imageconversion"": ""1.0.0"",
     ""com.unity.modules.imgui"": ""1.0.0"",
