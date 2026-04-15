@@ -58,8 +58,6 @@ namespace VoiceClaude.Editor
   ""dependencies"": {
     ""com.unity.ugui"": ""2.0.0"",
     ""com.unity.textmeshpro"": ""3.2.0-pre.10"",
-    ""com.unity.xr.openxr"": ""1.13.2"",
-    ""com.unity.xr.management"": ""4.5.0"",
     ""com.unity.modules.androidjni"": ""1.0.0"",
     ""com.unity.modules.audio"": ""1.0.0"",
     ""com.unity.modules.imageconversion"": ""1.0.0"",
@@ -72,9 +70,7 @@ namespace VoiceClaude.Editor
     ""com.unity.modules.unitywebrequest"": ""1.0.0"",
     ""com.unity.modules.unitywebrequestaudio"": ""1.0.0"",
     ""com.unity.modules.unitywebrequestwww"": ""1.0.0"",
-    ""com.unity.modules.video"": ""1.0.0"",
-    ""com.unity.modules.vr"": ""1.0.0"",
-    ""com.unity.modules.xr"": ""1.0.0""
+    ""com.unity.modules.video"": ""1.0.0""
   }
 }";
             Directory.CreateDirectory(Path.GetDirectoryName(manifestPath));
