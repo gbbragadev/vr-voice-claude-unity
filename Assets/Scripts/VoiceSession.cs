@@ -61,31 +61,37 @@ namespace VoiceClaude
 
         private async void HandleSpeechEnd(float[] samples)
         {
+            Debug.Log($"[VoiceSession] HandleSpeechEnd state={State} samples={samples.Length}");
             if (State != VoiceState.Recording) return;
             mic.StopCapture();
             State = VoiceState.Thinking;
             try
             {
-                // Grab the frame BEFORE any await — user is still looking
-                // at whatever they just asked about.
                 byte[] frameJpeg = cameraCapture.GrabJpeg(maxDim: 640, quality: 70);
+                Debug.Log($"[VoiceSession] frame={(frameJpeg == null ? "null" : frameJpeg.Length.ToString())}");
 
                 byte[] wav = MicCapture.EncodeWav(samples);
+                Debug.Log($"[VoiceSession] wav={wav.Length}, calling STT");
                 string userText = await ApiClient.SttAsync(wav);
+                Debug.Log($"[VoiceSession] STT='{userText}'");
                 OnUserSaid?.Invoke(userText);
                 _history.Add(new ChatMessage { role = "user", content = userText });
 
+                Debug.Log("[VoiceSession] calling Chat");
                 string reply = await ApiClient.ChatAsync(_history, frameJpeg);
+                Debug.Log($"[VoiceSession] Chat reply len={reply?.Length ?? 0}");
                 OnClaudeSaid?.Invoke(reply);
                 _history.Add(new ChatMessage { role = "assistant", content = reply });
 
+                Debug.Log("[VoiceSession] calling TTS");
                 byte[] mp3 = await ApiClient.TtsAsync(reply);
+                Debug.Log($"[VoiceSession] TTS mp3={mp3?.Length ?? 0}, playing");
                 State = VoiceState.Speaking;
                 StartCoroutine(playback.PlayMp3(mp3));
             }
             catch (Exception e)
             {
-                Debug.LogError($"VoiceSession error: {e.Message}");
+                Debug.LogError($"[VoiceSession] {e.GetType().Name}: {e.Message}\n{e.StackTrace}");
                 StartListening();
             }
         }
