@@ -25,11 +25,13 @@ namespace VoiceClaude.Editor
 
             BuildCamera();
             BuildEventSystem();
-            // Sprint 1: skip Canvas + VoiceManager wiring to isolate passthrough validation.
-            // Sprint 2 will reintroduce these (with avatar) once MR space is confirmed.
-            // var (canvasGO, label, border) = BuildCanvas();
-            // var voiceManager = BuildVoiceManager();
-            // WireTranscriptPanel(canvasGO, voiceManager, label, border);
+            // Sprint 1 REVISED: voice pipeline reactivated. Camera frames now come
+            // from the MediaProjection Java plugin (Assets/Plugins/Android/), not
+            // WebCamTexture. CameraCapture.StartCamera() triggers the OS consent
+            // dialog on first run; user accepts once per session.
+            var (canvasGO, label, border) = BuildCanvas();
+            var voiceManager = BuildVoiceManager();
+            WireTranscriptPanel(canvasGO, voiceManager, label, border);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
