@@ -45,6 +45,26 @@ namespace VoiceClaude
             _clip = null;
         }
 
+        // Android tears down AudioRecord when the activity pauses (e.g. during the
+        // MediaProjection consent dialog). When Unity resumes, Microphone.GetPosition
+        // keeps returning -1 even though _clip is still referenced. Restarting the
+        // mic on resume is the only way to get a fresh AudioRecord session.
+        private void OnApplicationPause(bool paused)
+        {
+            if (paused)
+            {
+                Debug.Log("[MicCapture] OnApplicationPause(true) — stopping mic");
+                StopCapture();
+            }
+            else if (isActiveAndEnabled)
+            {
+                Debug.Log("[MicCapture] OnApplicationPause(false) — restarting mic");
+                _loggedFirstSample = false;
+                _loggedFirstSpeech = false;
+                StartCapture();
+            }
+        }
+
         private void Update()
         {
             if (_clip == null) return;
