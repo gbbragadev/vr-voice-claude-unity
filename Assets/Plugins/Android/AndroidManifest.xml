@@ -11,7 +11,7 @@
   <uses-feature android:name="oculus.software.handtracking" android:required="false" />
   <application>
     <activity android:name="com.unity3d.player.UnityPlayerGameActivity"
-              android:theme="@style/UnityThemeSelector"
+              android:theme="@style/BaseUnityGameActivityTheme"
               android:exported="true">
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
